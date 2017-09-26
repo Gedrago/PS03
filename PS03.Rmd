@@ -1,6 +1,6 @@
 ---
 title: "STAT/MATH 495: Problem Set 03"
-author: "WRITE YOUR NAME HERE"
+author: "MERON GEDRAGO"
 date: "2017-09-26"
 output:
   html_document:
@@ -15,10 +15,21 @@ output:
 knitr::opts_chunk$set(echo = TRUE, fig.width=8, fig.height=4.5)
 
 # Load packages
+require(utils)
+require(graphics)
+require(tibble)
 library(tidyverse)
+require(magrittr)
+
+# getting our data
 data1 <- read_csv("data/data1.csv")
 data2 <- read_csv("data/data2.csv")
+
 ```
+
+
+
+
 
 
 # Question
@@ -34,11 +45,112 @@ For both `data1` and `data2` tibbles (a tibble is a data frame with some
 
 # Data 1
 
+We first divide section dataset 1 into five folds.Then within each fold, we section the 4/5th part of the fold to train the remaining of the fold. 
+
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
+set.seed(60)
+# randomly sample out five folds from data1
+d1fold1 <- data1 %>% sample_n (600,replace =FALSE)
+d1fold2 <- data1 %>% sample_n (600,replace =FALSE)
+d1fold3 <- data1 %>% sample_n (600,replace =FALSE)
+d1fold4 <- data1 %>% sample_n (600,replace =FALSE)
+d1fold5 <- data1 %>% sample_n (600,replace =FALSE)
 ```
+Then create a function to divide the folds into training and test sets, then make a spline model to  predict the values of y values of the test set. 
+
+```{r}
+#create a function to that takes in folds of a dataset and gives back RMSE each fold's RMSE
+fold_RMSE <- function (dataset, x) {
+  d1_trainingset <- dataset %>% sample_n (480,replace =FALSE)
+  d1_testset <- dataset %>% anti_join(d1_trainingset)
+  d1_testset
+  data1_spline1 <- smooth.spline(x=d1_trainingset$x, y=d1_trainingset$y,      df=x)
+  predicted_data1fold1 <- predict(data1_spline1, d1_testset$x)
+  as.data.frame(predicted_data1fold1)
+  RMSEfold1 <- RMSE(predicted_data1fold1$y, d1_testset$y)
+  RMSEfold1
+}
+```
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+#create a function to calculate the RMSE 
+RMSE = function(predicted, observed){
+  sqrt(mean((predicted - observed)^2))
+}
+```
+
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+# find the average RMSE of the folds for degrees of freedom ranging from 10 to 60
+RMSE_list <- { }
+for (i in 10:60) {
+RMSE_list [i] <- ((fold_RMSE(d1fold1,i) + fold_RMSE(d1fold2,i) + fold_RMSE(d1fold3,i) + fold_RMSE(d1fold4,i) +fold_RMSE(d1fold5,i))/5 )
+  
+}
+#Find the degrees of freedom where the RMSE is the lowest
+min(RMSE_list, na.rm = T)
+```
+
+From the above calculation, we find that the lowest RMSE is around 14.23481 which occurs when the degrees of freedom is around 22. Therefore the spline model for this data is optimal at df of 22. 
+We prove this as there is a big decrease in the RMSE around that area. 
+```{r}
+#plot the degrees of freedom vs. the average RMSE
+plot(RMSE_list,type = "l",col= "red")
+```
+From the above plot, we can clearly see that there is dip in the plot around 22. This means that the degrees of freedom for the lowest RMSE is 22.  
+
+The following is the plot of the spline model over the x and y values of data 1. As we can see, the blue line(our predicted numbers) fits the model fairly well. 
+```{r}
+smooth.spline(x= data1$x, y=data1$y, df=32) %>%
+  broom::augment() %>% 
+  ggplot(aes(x=x)) +
+  geom_point(aes(y=y)) +
+  geom_line(aes(y=.fitted), col="blue", size=1)
+
+```
+
 
 # Data 2
 
 ```{r, echo=TRUE, warning=FALSE, message=FALSE}
+set.seed(30)
+# randomly sample out five folds from data1
+d2fold1 <- data2 %>% sample_n (600,replace =FALSE)
+d2fold2 <- data2 %>% sample_n (600,replace =FALSE)
+d2fold3 <- data2 %>% sample_n (600,replace =FALSE)
+d2fold4 <- data2 %>% sample_n (600,replace =FALSE)
+d2fold5 <- data2 %>% sample_n (600,replace =FALSE)
+
+# find the average RMSE of the folds for degrees of freedom ranging from 10 to 60
+RMSE_list2 <- {}
+for (i in 10:60) {
+RMSE_list2 [i] <- ((fold_RMSE(d2fold1,i) + fold_RMSE(d2fold2,i) + fold_RMSE(d2fold3,i) + fold_RMSE(d2fold4,i) +fold_RMSE(d2fold5,i))/5 )
+  
+}
+#Find the degrees of freedom where the RMSE is the lowest
+min(RMSE_list2, na.rm = T)
 ```
+From the above calculation, we find that the lowest RMSE is around 17 which occurs when the degrees of freedom is around 33. Therefore the spline model for this data is optimal at df of 33. 
+We prove this as there is a big decrease in the RMSE around that area.
+
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+#plot the degrees of freedom vs. the average RMSE
+plot(RMSE_list2,type = "l",col= "red")
+```
+From the above plot, we can clearly see that there is dip in the plot around 32. This means that the degrees of freedom for the lowest RMSE is 32. 
+
+
+
+The following is the plot of the spline model over the x and y values of data 1. As we can see, the blue line(our predicted numbers) fits the model fairly well. 
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+smooth.spline(x= data2$x, y=data2$y, df=33) %>%
+  broom::augment() %>% 
+  ggplot(aes(x=x)) +
+  geom_point(aes(y=y)) +
+  geom_line(aes(y=.fitted), col="blue", size=1)
+  
+```
+
+
+
 
